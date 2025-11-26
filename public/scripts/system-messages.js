@@ -1,4 +1,3 @@
-import { lodash } from '../lib.js';
 import { addOneMessage, chat, displayVersion, setSendButtonState, system_avatar, systemUserName } from '../script.js';
 import { t } from './i18n.js';
 import { getMessageTimeStamp } from './RossAscends-mods.js';
@@ -31,67 +30,89 @@ export const system_message_types = {
 };
 
 export async function initSystemMessages() {
-    /** @type {ChatMessage} */
-    const defaultMessage = {
-        name: systemUserName,
-        force_avatar: system_avatar,
-        is_user: false,
-        is_system: true,
-        extra: { swipeable: false },
-    };
     /** @type {Record<string, ChatMessage>} */
     const result = {
-        /** @type {ChatMessage} */
-        help: lodash.merge(structuredClone(defaultMessage), {
+        help: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('help'),
-        }),
-        /** @type {ChatMessage} */
-        slash_commands: lodash.merge(structuredClone(defaultMessage), {
+        },
+        slash_commands: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: '',
-        }),
-        /** @type {ChatMessage} */
-        hotkeys: lodash.merge(structuredClone(defaultMessage), {
+        },
+        hotkeys: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('hotkeys'),
-        }),
-        /** @type {ChatMessage} */
-        formatting: lodash.merge(structuredClone(defaultMessage), {
+        },
+        formatting: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('formatting'),
-        }),
-        /** @type {ChatMessage} */
-        macros: lodash.merge(structuredClone(defaultMessage), {
+        },
+        macros: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('macros'),
-        }),
-        /** @type {ChatMessage} */
-        welcome: lodash.merge(structuredClone(defaultMessage), {
+        },
+        welcome: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('welcome', { displayVersion }),
             extra: {
                 uses_system_ui: true,
             },
-        }),
-        /** @type {ChatMessage} */
-        empty: lodash.merge(structuredClone(defaultMessage), {
+        },
+        empty: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: 'No one hears you. <b>Hint&#58;</b> add more members to the group!',
-        }),
-        /** @type {ChatMessage} */
-        generic: lodash.merge(structuredClone(defaultMessage), {
+        },
+        generic: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: 'Generic system message. User `text` parameter to override the contents',
-        }),
-        /** @type {ChatMessage} */
-        welcome_prompt: lodash.merge(structuredClone(defaultMessage), {
+        },
+        welcome_prompt: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('welcomePrompt'),
             extra: {
                 uses_system_ui: true,
                 isSmallSys: true,
             },
-        }),
-        /** @type {ChatMessage} */
-        assistant_note: lodash.merge(structuredClone(defaultMessage), {
+        },
+        assistant_note: {
+            name: systemUserName,
+            force_avatar: system_avatar,
+            is_user: false,
+            is_system: true,
             mes: await renderTemplateAsync('assistantNote'),
             extra: {
                 uses_system_ui: true,
                 isSmallSys: true,
             },
-        }),
+        },
     };
 
     Object.assign(system_messages, result);
@@ -111,8 +132,6 @@ export async function initSystemMessages() {
 
 /**
  * Gets a system message by type.
- * By default system messages are not swipeable.
- * This can be overridden by setting extra.swipeable to true.
  * @param {string} type Type of system message
  * @param {string} [text] Text to be sent
  * @param {ChatMessageExtra} [extra] Additional data to be added to the message
@@ -133,6 +152,10 @@ export function getSystemMessageByType(type, text, extra = {}) {
 
     if (type === system_message_types.SLASH_COMMANDS) {
         newMessage.mes = getSlashCommandsHelp();
+    }
+
+    if (!newMessage.extra || typeof newMessage.extra !== 'object') {
+        newMessage.extra = {};
     }
 
     newMessage.extra = Object.assign(newMessage.extra, extra);

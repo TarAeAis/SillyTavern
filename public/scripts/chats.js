@@ -10,6 +10,7 @@ import {
     event_types,
     getCurrentChatId,
     getRequestHeaders,
+    name1,
     name2,
     reloadCurrentChat,
     saveSettingsDebounced,
@@ -2139,15 +2140,13 @@ export function initChatUtilities() {
         await viewMessageFile(messageId, fileIndex);
     });
 
-    $(document).on('click', '.assistant_note_export', async function (_e) {
-        /** @type {ChatHeader} */
-        const chatHeader = {
-            chat_metadata: chat_metadata,
-            user_name: 'unused',
-            character_name: 'unused',
-        };
+    $(document).on('click', '.assistant_note_export', async function () {
         const chatToSave = [
-            chatHeader,
+            {
+                user_name: name1,
+                character_name: name2,
+                chat_metadata: chat_metadata,
+            },
             ...chat.filter(x => x?.extra?.type !== system_message_types.ASSISTANT_NOTE),
         ];
 

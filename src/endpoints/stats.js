@@ -12,21 +12,6 @@ import { getAllUserHandles, getUserDirectories } from '../users.js';
 
 const STATS_FILE = 'stats.json';
 
-const monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-];
-
 /**
  * @type {Map<string, Object>} The stats object for each user.
  */
@@ -38,79 +23,92 @@ const TIMESTAMPS = new Map();
 
 /**
  * Convert a timestamp to an integer timestamp.
+ * (sorry, it's momentless for now, didn't want to add a package just for this)
  * This function can handle several different timestamp formats:
- * 1. Date.now timestamps (the number of milliseconds since the Unix Epoch)
- * 2. ST "humanized" timestamps, formatted like `YYYY-MM-DD@HHhMMmSSsMSms`
- * 3. Date strings in the format `Month DD, YYYY H:MMam/pm`
- * 4. ISO 8601 formatted strings
- * 5. Date objects
+ * 1. Unix timestamps (the number of seconds since the Unix Epoch)
+ * 2. ST "humanized" timestamps, formatted like "YYYY-MM-DD @HHh MMm SSs ms"
+ * 3. Date strings in the format "Month DD, YYYY H:MMam/pm"
  *
  * The function returns the timestamp as the number of milliseconds since
  * the Unix Epoch, which can be converted to a JavaScript Date object with new Date().
  *
- * @param {string|number|Date} timestamp - The timestamp to convert.
+ * @param {string|number} timestamp - The timestamp to convert.
  * @returns {number} The timestamp in milliseconds since the Unix Epoch, or 0 if the input cannot be parsed.
  *
  * @example
  * // Unix timestamp
- * parseTimestamp(1609459200);
+ * timestampToMoment(1609459200);
  * // ST humanized timestamp
- * parseTimestamp("2021-01-01 \@00h 00m 00s 000ms");
+ * timestampToMoment("2021-01-01 \@00h 00m 00s 000ms");
  * // Date string
- * parseTimestamp("January 1, 2021 12:00am");
+ * timestampToMoment("January 1, 2021 12:00am");
  */
-function parseTimestamp(timestamp) {
+function timestampToMoment(timestamp) {
     if (!timestamp) {
         return 0;
     }
 
-    // Date object
-    if (timestamp instanceof Date) {
-        return timestamp.getTime();
+    if (typeof timestamp === 'number') {
+        return timestamp;
     }
 
-    // Unix time
-    if (typeof timestamp === 'number' || /^\d+$/.test(timestamp)) {
-        const unixTime = Number(timestamp);
-        const isValid = Number.isFinite(unixTime) && !Number.isNaN(unixTime) && unixTime >= 0;
-        if (!isValid) return 0;
-        return new Date(unixTime).getTime();
+    const pattern1 =
+        /(\d{4})-(\d{1,2})-(\d{1,2}) @(\d{1,2})h (\d{1,2})m (\d{1,2})s (\d{1,3})ms/;
+    const replacement1 = (
+        match,
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond,
+    ) => {
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(
+            2,
+            '0',
+        )}T${hour.padStart(2, '0')}:${minute.padStart(
+            2,
+            '0',
+        )}:${second.padStart(2, '0')}.${millisecond.padStart(3, '0')}Z`;
+    };
+    const isoTimestamp1 = timestamp.replace(pattern1, replacement1);
+    if (!isNaN(Number(new Date(isoTimestamp1)))) {
+        return new Date(isoTimestamp1).getTime();
     }
 
-    // ISO 8601 format
-    const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
-    if (isoPattern.test(timestamp)) {
-        return new Date(timestamp).getTime();
-    }
-
-    let dateFormats = [];
-
-    // meridiem-based format
-    const convertFromMeridiemBased = (_, month, day, year, hour, minute, meridiem) => {
+    const pattern2 = /(\w+)\s(\d{1,2}),\s(\d{4})\s(\d{1,2}):(\d{1,2})(am|pm)/i;
+    const replacement2 = (match, month, day, year, hour, minute, meridiem) => {
+        const monthNames = [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ];
         const monthNum = monthNames.indexOf(month) + 1;
-        const hour24 = meridiem.toLowerCase() === 'pm' ? (parseInt(hour, 10) % 12) + 12 : parseInt(hour, 10) % 12;
-        return `${year}-${monthNum}-${day.padStart(2, '0')}T${hour24.toString().padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+        const hour24 =
+            meridiem.toLowerCase() === 'pm'
+                ? (parseInt(hour, 10) % 12) + 12
+                : parseInt(hour, 10) % 12;
+        return `${year}-${monthNum.toString().padStart(2, '0')}-${day.padStart(
+            2,
+            '0',
+        )}T${hour24.toString().padStart(2, '0')}:${minute.padStart(
+            2,
+            '0',
+        )}:00Z`;
     };
-    // June 19, 2023 2:20pm
-    dateFormats.push({ callback: convertFromMeridiemBased, pattern: /(\w+)\s(\d{1,2}),\s(\d{4})\s(\d{1,2}):(\d{1,2})(am|pm)/i });
-
-    // ST "humanized" format patterns
-    const convertFromHumanized = (_, year, month, day, hour, min, sec, ms) => {
-        ms = typeof ms !== 'undefined' ? `.${ms.padStart(3, '0')}` : '';
-        return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${min.padStart(2, '0')}:${sec.padStart(2, '0')}${ms}Z`;
-    };
-    // 2024-07-12@01h31m37s123ms
-    dateFormats.push({ callback: convertFromHumanized, pattern: /(\d{4})-(\d{1,2})-(\d{1,2})@(\d{1,2})h(\d{1,2})m(\d{1,2})s(\d{1,3})ms/ });
-    // 2024-7-12@01h31m37s
-    dateFormats.push({ callback: convertFromHumanized, pattern: /(\d{4})-(\d{1,2})-(\d{1,2})@(\d{1,2})h(\d{1,2})m(\d{1,2})s/ });
-    // 2024-6-5 @14h 56m 50s 682ms
-    dateFormats.push({ callback: convertFromHumanized, pattern: /(\d{4})-(\d{1,2})-(\d{1,2}) @(\d{1,2})h (\d{1,2})m (\d{1,2})s (\d{1,3})ms/ });
-
-    for (const x of dateFormats) {
-        const rgxMatch = timestamp.match(x.pattern);
-        if (!rgxMatch) continue;
-        const isoTimestamp = x.callback(...rgxMatch);
-        return new Date(isoTimestamp).getTime();
+    const isoTimestamp2 = timestamp.replace(pattern2, replacement2);
+    if (!isNaN(Number(new Date(isoTimestamp2)))) {
+        return new Date(isoTimestamp2).getTime();
     }
 
     return 0;
@@ -418,7 +416,7 @@ function calculateTotalGenTimeAndWordCount(
                 // If this is the first user message, set the first chat time
                 if (json.is_user) {
                     //get min between firstChatTime and timestampToMoment(json.send_date)
-                    firstChatTime = Math.min(parseTimestamp(json.send_date), firstChatTime);
+                    firstChatTime = Math.min(timestampToMoment(json.send_date), firstChatTime);
                 }
             } catch (error) {
                 console.error(`Error parsing line ${line}: ${error}`);

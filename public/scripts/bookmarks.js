@@ -303,11 +303,7 @@ export async function convertSoloToGroupChat() {
     const metadata = Object.assign({}, chat_metadata);
     delete metadata.main_chat;
     /** @type {ChatHeader} */
-    const chatHeader = {
-        chat_metadata: metadata,
-        user_name: 'unused',
-        character_name: 'unused',
-    };
+    const chatHeader = { chat_metadata: metadata };
     /** @type {Omit<Group, 'id'>} */
     const groupCreateModel = {
         name: name,

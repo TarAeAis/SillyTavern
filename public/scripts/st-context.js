@@ -57,9 +57,7 @@ import {
     hideSwipeButtons,
     deleteMessage,
     refreshSwipeButtons,
-    swipe,
     isSwipingAllowed,
-    swipeState,
     ensureMessageMediaIsArray,
     getMediaDisplay,
     getMediaIndex,
@@ -220,12 +218,10 @@ export function getContext() {
         swipe: {
             left: swipe_left,
             right: swipe_right,
-            to: swipe,
             show: showSwipeButtons,
             hide: hideSwipeButtons,
             refresh: refreshSwipeButtons,
-            isAllowed: isSwipingAllowed,
-            state: () => swipeState,
+            isAllowed: () => isSwipingAllowed,
         },
         variables: {
             local: {
